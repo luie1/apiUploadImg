@@ -1,18 +1,55 @@
 const User=require('../../database/schema/user');
+const Img=require('../../database/schema/img');
 const express=require('express');
 const router=express.Router();
 const empty=require('is-empty');
 const sha1=require('sha1');
 const jwt=require('jsonwebtoken');
-const auth=require('./ver');
+const multer=require('multer');
+const path = require('path');
+const fs = require('fs');
 
-router.get('/',auth,(req,res)=>{
+
+const auth=require('./ver');const storage = multer.diskStorage({
+    destination: function (res, file, cb) {
+        try {
+            fs.statSync('./public/uploads');
+        } catch (e) {
+            fs.mkdirSync('./public/uploads/');
+        }
+        cb(null, './public/uploads/');
+    },
+    filename: (res, file, cb) => {
+        cb(null, 'IMG-' + Date.now() + path.extname(file.originalname))
+    }
+})
+var upload = multer({storage: storage });
+
+
+router.get('/',(req,res)=>{
     User.find({},(err,docs)=>{
       if(empty(docs)){
         res.json({message:'no existen usuarios en la bd'});
       }else{
         res.json(docs);
       }
+    });
+});
+
+router.post('/subir',upload.array('img', 12),async(req,res)=>{
+    let imgSet=[];
+    if(!empty(req.files)){
+      req.files.forEach(foto=>{
+        imgSet.push({url:foto['filename']});
+      });
+    }
+    //console.log(req.body);
+    let ins=new Img({
+      image:imgSet
+    });
+    let result =await ins.save();
+    res.json({
+      message:'img ins'
     });
 });
 
@@ -36,6 +73,7 @@ router.post('/login',(req,res)=>{
             });
             res.json({
               message:'autenticacion exitosa',
+              admin:doc.admin,
               token:token
             });
         }else {
@@ -46,4 +84,12 @@ router.post('/login',(req,res)=>{
       }
     });
 });
+
+router.delete('/:id',(req,res)=>{
+    let id=req.params.id;
+    User.findByIdAndRemove(id,()=>{
+      res.json({message:'usuario eliminado'});
+    });
+});
+
 module.exports=router;

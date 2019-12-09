@@ -4,7 +4,10 @@ const user={
   nombre:String,
   email:String,
   password:String,
-  admin:Boolean
+  admin:Boolean,
+  img:[{
+    url:String
+  }]
 };
 
 const usermodel=mongoose.model('user',user);
